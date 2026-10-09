@@ -120,4 +120,72 @@
       inp.value = o;
     });
   });
+
+  /* ---------- carousel (Возможности) ---------- */
+  (function () {
+    var track = document.querySelector('.feat-track'); if (!track) return;
+    var prev = document.querySelector('[data-car=prev]'), next = document.querySelector('[data-car=next]');
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    function step() { var c = track.querySelector('.feat-row'); return c ? c.getBoundingClientRect().width + 16 : 300; }
+    function upd() {
+      var max = track.scrollWidth - track.clientWidth - 2;
+      if (prev) prev.disabled = track.scrollLeft <= 2;
+      if (next) next.disabled = track.scrollLeft >= max;
+    }
+    function go(dir) { track.scrollBy({ left: dir * step(), behavior: reduce ? 'auto' : 'smooth' }); }
+    if (prev) prev.addEventListener('click', function () { go(-1); });
+    if (next) next.addEventListener('click', function () { go(1); });
+    track.addEventListener('scroll', upd, { passive: true });
+    track.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+      if (e.key === 'ArrowLeft') { e.preventDefault(); go(-1); }
+    });
+    window.addEventListener('resize', upd); upd();
+  })();
+
+  /* ---------- lightbox: клик по картинке разворачивает её ---------- */
+  (function () {
+    var items = $$('[data-zoom], .art-body figure img');
+    if (!items.length) return;
+    var box = document.createElement('div');
+    box.className = 'lightbox'; box.setAttribute('role', 'dialog'); box.setAttribute('aria-modal', 'true'); box.setAttribute('aria-label', 'Просмотр изображения'); box.hidden = true;
+    box.innerHTML = '<button type="button" class="lb-close" aria-label="Закрыть"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>' +
+      '<button type="button" class="lb-nav lb-prev" aria-label="Предыдущее"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>' +
+      '<button type="button" class="lb-nav lb-next" aria-label="Следующее"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>' +
+      '<figure><img alt=""><figcaption></figcaption></figure>';
+    document.body.appendChild(box);
+    var img = box.querySelector('img'), cap = box.querySelector('figcaption'), cur = -1, opener = null;
+    function show(i) {
+      cur = (i + items.length) % items.length;
+      var el = items[cur];
+      img.src = el.getAttribute('data-full') || el.currentSrc || el.src;
+      img.alt = el.alt || ''; cap.textContent = el.alt || '';
+    }
+    function open(i, from) {
+      opener = from || null; show(i); box.hidden = false;
+      document.body.style.overflow = 'hidden';
+      box.querySelector('.lb-close').focus();
+      box.classList.toggle('single', items.length < 2);
+    }
+    function close() { box.hidden = true; document.body.style.overflow = ''; img.removeAttribute('src'); if (opener) opener.focus(); }
+    items.forEach(function (el, i) {
+      el.classList.add('zoomable');
+      el.setAttribute('tabindex', '0'); el.setAttribute('role', 'button');
+      el.setAttribute('aria-label', 'Увеличить: ' + (el.alt || 'изображение'));
+      el.addEventListener('click', function () { open(i, el); });
+      el.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(i, el); } });
+    });
+    box.addEventListener('click', function (e) {
+      if (e.target === box || e.target.closest('.lb-close')) close();
+      else if (e.target.closest('.lb-prev')) show(cur - 1);
+      else if (e.target.closest('.lb-next')) show(cur + 1);
+    });
+    document.addEventListener('keydown', function (e) {
+      if (box.hidden) return;
+      if (e.key === 'Escape') close();
+      else if (e.key === 'ArrowLeft') show(cur - 1);
+      else if (e.key === 'ArrowRight') show(cur + 1);
+      else if (e.key === 'Tab') { e.preventDefault(); box.querySelector('.lb-close').focus(); }
+    });
+  })();
 })();
